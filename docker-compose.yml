@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17.4
+    container_name: pg_job
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: job_user
+      POSTGRES_PASSWORD: job_pass
+      POSTGRES_DB: job_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # docker exec -it redis_job redis-cli
+  # FLUSHALL
+  redis:
+    image: redis:7.4
+    container_name: redis_job
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
