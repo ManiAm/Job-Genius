@@ -167,7 +167,7 @@ def update_sidebar():
                 )
 
                 st.pydeck_chart(pdk.Deck(
-                    map_style="mapbox://styles/mapbox/light-v9",
+                    map_style=config.map_style_jobs,
                     initial_view_state=view_state,
                     layers=[area_layer, center_layer],  # order matters!
                 ))

@@ -25,19 +25,19 @@ The result is a dramatic return on time investment. What would normally require 
 
 Acquiring high-quality job listings is one of the challenges in building a reliable job discovery platform. While web scraping may seem like a quick solution for collecting job data, it comes with major drawbacks. Most modern job sites employ strict protections against scraping, including rate limiting, IP blocking, CAPTCHA challenges, and aggressive bot detection. Beyond the technical hurdles, scraping often violates the terms of service of these platforms, opening the door to legal consequences such as cease-and-desist notices or even platform bans.
 
-To ensure scalability, reliability, and legal compliance, Job-Genius leverages trusted job aggregation APIs that provide structured, high-quality data from multiple job boards and company sources. These APIs are designed for developers, often with official partnerships or licensing agreements in place, ensuring access to up-to-date listings in a legally compliant way. This approach not only simplifies integration but also enables consistent formatting, better data quality, and a sustainable foundation for building advanced filtering, semantic search, and AI-driven matching features.
+To ensure scalability, reliability, and legal compliance, developers should leverage trusted job aggregation APIs that provide structured, high-quality data from multiple sources. These APIs are designed for developers, often with official partnerships or licensing agreements in place, ensuring access to up-to-date listings in a legally compliant way. This approach not only simplifies integration but also enables consistent formatting, better data quality, and a sustainable foundation for building advanced filtering, semantic search, and AI-driven matching features.
 
-## Google for Jobs
+**Google for Jobs**
 
 "Google for Jobs" is a specialized feature within the Google Search ecosystem designed to aggregate and surface job listings from a wide variety of sources including company career sites, staffing agencies, and popular job boards. When users enter job-related queries such as "software engineer jobs near me", Google automatically displays a job search interface with filters like location, job type, posting date, and employer. The listings shown are not hosted by Google; instead, they are indexed from external websites that implement structured data markup following the Schema.org [JobPosting](https://schema.org/JobPosting) specification.
 
 Despite its functionality, "Google for Jobs" does not offer a public API. Unlike other Google services such as Maps, YouTube, or Gmail, there is no official endpoint for developers to directly access job listing data from Google for Jobs. The system relies entirely on Google's web crawlers to discover and index job postings embedded with the proper schema on third-party sites. As a result, organizations wishing to have their jobs appear on Google must ensure their listings meet Google’s job posting guidelines and are accessible for crawling.
 
-## OpenWeb Ninja JSearch API
+**OpenWeb Ninja JSearch API**
 
-[JSearch](https://www.openwebninja.com/api/jsearch) by OpenWeb Ninja offers fast and reliable job searches by collecting the latest job information and salary data from "Google for Jobs" in real-time. It covers a wide range of public job sites such as LinkedIn, Indeed, Glassdoor, ZipRecruiter, Monster, etc. With over 40 data points per job and advanced search, query, and filtering capabilities, JSearch stands out as the most comprehensive and well-maintained job API available, designed to provide users with access to a rich collection of job opportunities.
+[JSearch](https://www.openwebninja.com/api/jsearch) by OpenWeb Ninja offers fast and reliable job searches by collecting the latest job information and salary data from "Google for Jobs" in real-time. It covers a wide range of public job sites such as LinkedIn, Indeed, Glassdoor, ZipRecruiter, Monster, etc. With over 40 data points per job and advanced search, query, and filtering capabilities, JSearch stands out as a suitable and well-maintained job API available, designed to provide users with access to a rich collection of job opportunities.
 
-Using the API provides access to up-to-date information, increased flexibility, and improved scalability. JSearch also provides a generous free tier, allowing developers to test and integrate the API without requiring upfront payment or credit card details. It is more cost-effective and reduces development and operational costs, as well as accelerates the development process by eliminating the need to collect, structure, and maintain our own data on the frontend.
+JSearch also provides a generous free tier, allowing developers to test and integrate the API without requiring upfront payment or credit card details. It is more cost-effective and reduces development and operational costs, as well as accelerates the development process by eliminating the need to collect, structure, and maintain our own data on the frontend.
 
 ## Architecture
 
@@ -71,28 +71,32 @@ All AI-related operations are handled by the [RAG-Search](https://github.com/Man
 
 Once this preprocessing pipeline is complete, users can interact with the system by asking natural language questions about the currently indexed jobs. The RAG-Search service retrieves the most relevant job chunks based on the user’s query and passes them to a language model to generate context-aware, personalized responses.
 
-All LLMs are deployed behind a LiteLLM proxy, which exposes a unified API interface regardless of the underlying provider or model. This abstraction allows the system to switch between different models such as OpenAI, Claude, or local deployments without requiring changes to the application logic. By decoupling model selection from implementation, LiteLLM enables fine-grained control over which models are used for specific tasks. For example, a lightweight model can be used for summarization to optimize cost and speed, while a more powerful model may be reserved for real-time chat and reasoning.
+All LLMs are deployed behind a [LiteLLM](https://www.litellm.ai/) proxy, which exposes a unified API interface regardless of the underlying provider or model. This abstraction allows the system to switch between different models such as OpenAI, Claude, or local deployments without requiring changes to the application logic. By decoupling model selection from implementation, LiteLLM enables fine-grained control over which models are used for specific tasks. For example, a lightweight model can be used for summarization to optimize cost and speed, while a more powerful model may be reserved for real-time chat and reasoning.
 
 ## Getting Started
 
-Start all the containers:
-
-    docker compose up -d
-
-Create a `.env` file and add your API credentials for JSearch and FINNHUB::
+Create a `.env` file and add your API credentials for JSearch and FINNHUB:
 
     RAPID_API_KEY=""
     FINNHUB_API_KEY=""
 
 Open `config.py` file and ensure that the RAG-Search service URL is correctly set to match your deployment environment.
 
-Launch the Job-Genius Streamlit interface:
+Build docker images:
 
-    streamlit run main.py
+    docker compose build
+
+Start all the containers:
+
+    docker compose up -d
 
 Open your browser and navigate to the following URL to access the Job-Genius front-end:
 
     http://localhost:8501/
+
+Check the `job-genius` container logs for any issues:
+
+    docker logs job-genius
 
 ## Demo
 

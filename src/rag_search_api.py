@@ -102,7 +102,6 @@ class RAG_SEARCH_REST_API_Client(REST_API_Client):
 
         return True, max_tokens
 
-
     ##########
 
     def rag_chat(

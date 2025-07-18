@@ -85,18 +85,7 @@ def send_prompt_to_llm(user_prompt):
 
     ################
 
-    with st.spinner("Analyzing job context and generating advice..."):
-
-        status, output = rag_search_remote.rag_chat(
-            user_prompt,
-            config.llm_model_chat,
-            config.embed_model,
-            collection_name,
-            instructions=instructions,
-            score_threshold=0.7,
-            max_documents=10
-        )
-
+    status, output = chat_llm(user_prompt, collection_name)
     if not status:
         st.warning(output)
         return None
@@ -400,3 +389,34 @@ def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
         st_status.update(label="Storing embedding done!", state="complete", expanded=False)
 
     return True, None
+
+
+def chat_llm(user_prompt, collection_name):
+
+    with st.status("Analyzing job context and generating advice...", expanded=True) as st_status:
+
+        if not rag_search_remote.is_healthy():
+            return False, "RAG-Talk is not reachable"
+
+        st.write(f"Loading embedding model: {config.embed_model}...")
+
+        status, output = rag_search_remote.load_model([config.embed_model])
+        if not status:
+            return False, f"Cannot load model: {output}"
+
+        status, output = rag_search_remote.rag_chat(
+            user_prompt,
+            config.llm_model_chat,
+            config.embed_model,
+            collection_name,
+            instructions=instructions,
+            score_threshold=0.7,
+            max_documents=10
+        )
+
+        st_status.update(label="Response received!", state="complete", expanded=False)
+
+    if not status:
+        return False, output
+
+    return True, output

@@ -8,7 +8,7 @@ from sqlalchemy import LargeBinary
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 
-DATABASE_URL = "postgresql://job_user:job_pass@localhost:5433/job_db"
+DATABASE_URL = "postgresql://job_user:job_pass@pg_job:5432/job_db"
 
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)

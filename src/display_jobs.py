@@ -8,6 +8,7 @@ import pydeck as pdk
 import phonenumbers
 from phonenumbers import PhoneNumberFormat
 
+import config
 from finnhub_api import Finnhub_REST_API_Client
 stock_client = Finnhub_REST_API_Client(url="https://finnhub.io/api", api_ver="v1")
 
@@ -158,7 +159,7 @@ def update_job_map(job_list, profile_data):
     )
 
     st.pydeck_chart(pdk.Deck(
-        map_style="mapbox://styles/mapbox/light-v9",
+        map_style=config.map_style_location,
         initial_view_state=view_state,
         layers=layers
     ))
@@ -206,7 +207,7 @@ def display_jobs(job_list):
         stock_key = f"stock_info_{job_id}"
         show_key = f"show_company_info_{job_id}"
 
-        label = f"💼 **{job_title}** — {location} — {company} — *Posted {posted}*"
+        label = f"💼 **{job_title}** - {location} - {company} - *Posted {posted}*"
 
         with st.expander(label, expanded=False):
 

@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: job_db
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - jobnet
 
   # docker exec -it redis_job redis-cli
   # FLUSHALL
@@ -20,6 +22,27 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - jobnet
+
+  job-genius:
+    build: ./src
+    container_name: job-genius
+    hostname: job-genius
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    networks:
+      - jobnet
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
+
+networks:
+  jobnet:
+    driver: bridge
 
 volumes:
   pgdata:

@@ -7,7 +7,7 @@ import redis
 
 logging.basicConfig(level=logging.INFO)
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='redis_job', port=6379, db=0)
 
 
 def sanitize_key(key_str):
