@@ -5,8 +5,10 @@ import re
 import streamlit as st
 import pydeck as pdk
 from nominatim_api import get_coordinates
+from sqlalchemy import delete
 
 import config
+from models_sql import Session, Job, JobEmbedding
 from locale_utils import get_countries, get_languages
 from db_profiles import get_all_profiles, load_profile, save_profile
 from models_redis import redis_client
@@ -214,13 +216,40 @@ def update_sidebar():
 
     st.divider()
 
-    if st.button("🗑️ Clear Job Cache", type="primary", use_container_width=False):
+    if st.button("🗑️ Clear Job Cache", use_container_width=False):
 
         try:
             redis_client.flushdb()
             st.success("✅ Redis job cache cleared.")
         except Exception as e:
             st.error(f"❌ Failed to clear Redis cache: {e}")
+
+    if st.button("🗑️ Clear All Summarizations", use_container_width=False):
+
+        db_session = Session()
+
+        try:
+            db_session.query(Job).filter(Job.is_summarized == True).update(
+                {Job.is_summarized: False}, synchronize_session=False)
+            db_session.commit()
+            st.success(f"✅ Cleared summarization.")
+        except Exception as e:
+            db_session.rollback()
+            st.error(f"❌ Failed to clear summarizations: {e}")
+
+    if st.button("🗑️ Clear All Embeddings", use_container_width=False):
+
+        db_session = Session()
+
+        try:
+            db_session.query(Job).filter(Job.is_embedded == True).update(
+                {Job.is_embedded: False}, synchronize_session=False)
+            db_session.execute(delete(JobEmbedding))
+            db_session.commit()
+            st.success(f"✅ Cleared embeddings.")
+        except Exception as e:
+            db_session.rollback()
+            st.error(f"❌ Failed to clear embeddings: {e}")
 
 
 def create_profile_callback():

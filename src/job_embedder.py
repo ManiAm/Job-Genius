@@ -10,9 +10,9 @@ from models_sql import Session, Job, JobEmbedding
 
 
 summarization_prompt = """
-You are a career assistant helping candidates understand job postings.
+You are an intelligent and helpful career assistant trained to extract key insights from job postings to help candidates quickly assess fit and interest.
 
-Given the following job posting text, extract and summarize the following key information:
+Given the following job posting, extract and summarize the following structured information:
 
 1. **Role Overview** - What are the primary responsibilities and objectives of the position?
 2. **Seniority Level** - Determine whether the role is Entry-Level, Junior, Mid-Level, Senior, or Executive.
@@ -20,7 +20,10 @@ Given the following job posting text, extract and summarize the following key in
 4. **Preferred Experience or Qualifications** - Summarize any additional desirable qualifications.
 5. **Company or Role Highlights** - Mention any unique benefits, perks, or noteworthy aspects of the company or role.
 
-Keep the summary concise and structured using bullet points where appropriate.
+**Instructions**:
+- Be concise and use bullet points where appropriate.
+- Use professional language suitable for job seekers comparing roles.
+- Ensure accuracy and do not assume unlisted technologies or details.
 
 Here is the job text:
 
