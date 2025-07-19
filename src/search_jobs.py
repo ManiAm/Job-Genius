@@ -98,9 +98,10 @@ def start_job_search():
             try_count += 1
             time.sleep(3)
 
-    insert_jobs(result_list)
+    insert_jobs_db(result_list)
 
-    st.session_state["result_list"] = result_list
+    job_ids = [job["job_id"] for job in result_list if "job_id" in job]
+    st.session_state["job_id_list"] = job_ids
 
 
 def is_candidate(job_details, distance_radius, my_latitude, my_longitude):
@@ -132,7 +133,7 @@ def is_candidate(job_details, distance_radius, my_latitude, my_longitude):
     return False
 
 
-def insert_jobs(result_list):
+def insert_jobs_db(result_list):
 
     db_session = Session()
 

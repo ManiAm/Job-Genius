@@ -177,7 +177,7 @@ def summarized_emails(db_session, jobs_not_summarized):
                     st.warning(f"job text length exceeds maximum context length {context_length_characters}")
 
             status, final_summary = rag_search_remote.llm_chat(
-                summarization_prompt,
+                summarization_prompt_final,
                 config.llm_model_summarization,
                 session_id="llm_combine_summary")
 

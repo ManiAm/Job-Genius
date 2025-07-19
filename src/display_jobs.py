@@ -1,7 +1,7 @@
 
 import math
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
@@ -9,11 +9,16 @@ import phonenumbers
 from phonenumbers import PhoneNumberFormat
 
 import config
+from models_sql import Session, Job
 from finnhub_api import Finnhub_REST_API_Client
+
 stock_client = Finnhub_REST_API_Client(url="https://finnhub.io/api", api_ver="v1")
 
 
-def process_results(job_list, profile_data):
+def process_results(job_id_list, profile_data):
+
+    db_session = Session()
+    job_list = db_session.query(Job).filter(Job.job_id.in_(job_id_list)).all()
 
     final_result_list = update_filter_bar(job_list)
     update_job_map(final_result_list, profile_data)
@@ -38,15 +43,16 @@ def update_filter_bar(job_list):
     # Step 1: Pre-filter job list based on current selections
     filtered_jobs = [
         job for job in job_list
-        if (selected_company == "All" or job.get("employer_name") == selected_company)
-        and (selected_location == "All" or job.get("job_city") == selected_location)
-        and (selected_employment == "All" or job.get("job_employment_type") == selected_employment)
+        if (selected_company == "All" or (job.company and job.company.name == selected_company))
+        and (selected_location == "All" or job.city == selected_location)
+        and (selected_employment == "All" or (selected_employment in job.employment_type if job.employment_type else False))
     ]
 
     # Step 2: Recount values in filtered list
-    company_counts = Counter(job.get("employer_name") for job in filtered_jobs if job.get("employer_name"))
-    location_counts = Counter(job.get("job_city") for job in filtered_jobs if job.get("job_city"))
-    employment_counts = Counter(job.get("job_employment_type") for job in filtered_jobs if job.get("job_employment_type"))
+    company_counts = Counter(job.company.name for job in filtered_jobs if job.company)
+    location_counts = Counter(job.city for job in filtered_jobs if job.city)
+    employment_flat = [etype for job in filtered_jobs if job.employment_type for etype in job.employment_type]
+    employment_counts = Counter(employment_flat)
 
     def format_options(counter):
         return ["All"] + sorted([f"{k} ({v})" for k, v in counter.items()])
@@ -82,25 +88,31 @@ def update_filter_bar(job_list):
         )
         selected_employment = extract_raw_value(selected_employment_label)
 
-    # Step 4: Final filtering with updated selections
+    # Step 4: Apply final filters
     final_result_list = [
         job for job in job_list
-        if (selected_company == "All" or job.get("employer_name") == selected_company)
-        and (selected_location == "All" or job.get("job_city") == selected_location)
-        and (selected_employment == "All" or job.get("job_employment_type") == selected_employment)
+        if (selected_company == "All" or (job.company and job.company.name == selected_company))
+        and (selected_location == "All" or job.city == selected_location)
+        and (selected_employment == "All" or (selected_employment in job.employment_type if job.employment_type else False))
     ]
 
-    final_result_list.sort(key=lambda job: job.get("job_title", "").lower())
+    final_result_list.sort(key=lambda job: job.title.lower() if job.title else "")
 
     return final_result_list
 
 
 def update_job_map(job_list, profile_data):
 
-    # Combine job and user points
-    df = pd.DataFrame(job_list)
-    df = df.rename(columns={"job_latitude": "lat", "job_longitude": "lon"})
-    df = df.dropna(subset=["lat", "lon"])
+    data = [
+        {
+            "lat": job.job_latitude,
+            "lon": job.job_longitude
+        }
+        for job in job_list
+        if job.job_latitude is not None and job.job_longitude is not None
+    ]
+
+    df = pd.DataFrame(data)
 
     # Add your current location
     my_latitude = profile_data.get("latitude")
@@ -109,6 +121,10 @@ def update_job_map(job_list, profile_data):
     if my_latitude and my_longitude:
         user_point = pd.DataFrame([{"lat": my_latitude, "lon": my_longitude}])
         df = pd.concat([df, user_point], ignore_index=True)
+
+    if df.empty:
+        st.info("No job locations to display.")
+        return
 
     # Get map bounds
     min_lat, max_lat = df["lat"].min(), df["lat"].max()
@@ -178,17 +194,17 @@ def display_jobs(job_list):
 
     for job in job_list:
 
-        job_id = job.get('job_id')
-        job_title = job.get('job_title', 'N/A')
-        company = job.get('employer_name', 'Unknown')
+        job_id = job.job_id
+        job_title = job.title or "N/A"
+        company = job.company.name if job.company else "Unknown"
 
-        city = job.get('job_city', 'N/A')
-        country = job.get('job_country', 'N/A')
+        city = job.city or "N/A"
+        country = job.country or "N/A"
         location = f"{city}, {country}" if city != 'N/A' else country
 
-        employment_type = job.get("job_employment_type", "N/A")
-        salary = job.get("job_min_salary")
-        salary_max = job.get("job_max_salary")
+        employment_type = ", ".join(job.employment_type or []) or "N/A"
+        salary = job.job_min_salary
+        salary_max = job.job_max_salary
 
         if pd.notnull(salary) and pd.notnull(salary_max):
             estimated_salary = f"{int(salary):,} - {int(salary_max):,}"
@@ -197,10 +213,17 @@ def display_jobs(job_list):
         else:
             estimated_salary = "N/A"
 
-        posted_at = job.get("job_posted_at_datetime_utc")
+        posted_at = job.posted_at_utc
+
         if posted_at:
-            days_ago = (pd.Timestamp.utcnow() - pd.to_datetime(posted_at)).days
-            posted = f"{days_ago} days ago"
+            try:
+                if posted_at.tzinfo is None:
+                    posted_at = posted_at.replace(tzinfo=timezone.utc)
+                days_ago = (datetime.now(timezone.utc) - posted_at).days
+                posted = f"{days_ago} days ago"
+            except Exception as e:
+                posted = "Unknown"
+                st.warning(f"Could not parse posted_at: {posted_at} ({e})")
         else:
             posted = "Unknown"
 
@@ -211,20 +234,17 @@ def display_jobs(job_list):
 
         with st.expander(label, expanded=False):
 
-            logo_url = job.get("employer_logo")
+            logo_url = job.company.logo_url if job.company and job.company.logo_url else None
             if logo_url:
                 st.image(logo_url, width=50)
 
             st.markdown(f"**🏢 Company:** {company}")
 
-            # Show toggle button
             if st.button(f"🔍 Show More About the Company", key=f"btn_{job_id}"):
                 st.session_state[show_key] = not st.session_state.get(show_key, False)
 
-            # If user clicked to show company info
             if st.session_state.get(show_key, False):
 
-                # Fetch stock info only once per session per job
                 if stock_key not in st.session_state:
                     with st.spinner("Fetching company details..."):
                         st.session_state[stock_key] = get_stock_details(company)
@@ -244,7 +264,7 @@ def display_jobs(job_list):
                     latest_news = stock_info.get("news", [])
 
                     international = 'N/A'
-                    raw_number = stock_info.get('phone', None)
+                    raw_number = stock_info.get('phone')
                     if raw_number:
                         parsed_number = phonenumbers.parse(raw_number, "US")
                         international = phonenumbers.format_number(parsed_number, PhoneNumberFormat.INTERNATIONAL)
@@ -259,32 +279,23 @@ def display_jobs(job_list):
                     st.markdown(f"**👥 Peers:** {', '.join(peers) if peers else 'N/A'}")
 
                     if latest_news:
-
                         st.markdown("### 📰 Latest News")
-
                         for article in latest_news:
-
                             headline = article.get("headline", "No title")
                             url = article.get("url", "#")
                             dt = datetime.utcfromtimestamp(article["datetime"]).strftime("%Y-%m-%d %H:%M UTC")
-
                             with st.container():
                                 st.markdown(f"**[{headline}]({url})** at *{dt}*")
-
                 else:
                     st.warning("This company is not publicly traded or financial data is unavailable.")
-
-            #######################################################
 
             st.markdown(f"**📍 Location:** {location}")
             st.markdown(f"**🧾 Employment Type:** {employment_type}")
             st.markdown(f"**💰 Estimated Salary:** {estimated_salary}")
             st.markdown(f"**🕓 Posted:** {posted}")
-            st.markdown(f"**🔗 [Job Link]({job.get('job_apply_link', '#')})**")
+            st.markdown(f"**🔗 [Job Link]({job.apply_link or '#'})**")
 
-            #######################################################
-
-            highlights = job.get("job_highlights", {})
+            highlights = job.job_highlights or {}
             if highlights:
                 st.markdown("#### ✨ Job Highlights")
                 for section, bullets in highlights.items():
