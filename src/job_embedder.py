@@ -85,7 +85,7 @@ def send_prompt_to_llm(user_prompt):
 
     ################
 
-    status, output = chat_llm(user_prompt, collection_name)
+    status, output = chat_llm(user_prompt, collection_name, batch_id)
     if not status:
         st.warning(output)
         return None
@@ -391,7 +391,7 @@ def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
     return True, None
 
 
-def chat_llm(user_prompt, collection_name):
+def chat_llm(user_prompt, collection_name, batch_id):
 
     with st.status("Analyzing job context and generating advice...", expanded=True) as st_status:
 
@@ -410,6 +410,7 @@ def chat_llm(user_prompt, collection_name):
             config.embed_model,
             collection_name,
             instructions=instructions,
+            session_id=str(batch_id),
             score_threshold=0.7,
             max_documents=10
         )
