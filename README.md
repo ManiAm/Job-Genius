@@ -102,7 +102,7 @@ Check the `job-genius` container logs for any issues:
 
 This demo highlights the capabilities of Job-Genius, enabling users to efficiently explore job opportunities powered by semantic search and AI-enhanced matching.
 
-[demo.mp4](https://github.com/user-attachments/assets/ad52c401-27aa-4519-ad6f-8e501ce7ffad)
+[demo.mp4](https://github.com/user-attachments/assets/ffbb0c37-51d1-43e4-b45c-786a8107d1d5)
 
 **Step 1: Create a Profile**
 
