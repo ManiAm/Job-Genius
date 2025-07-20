@@ -74,6 +74,16 @@ def update_sidebar():
 
     ##############
 
+    st.sidebar.header("⭐ Favorites")
+
+    if "show_favorites_pane" not in st.session_state:
+        st.session_state.show_favorites_pane = False
+
+    if st.sidebar.button("📝 View Favorite Jobs"):
+        st.session_state.show_favorites_pane = True
+
+    ##############
+
     st.header("🎯 Filters")
 
     st.text_input("Keywords", profile_data.get("keywords", "software engineer"), key="keywords", on_change=save_current_filters)

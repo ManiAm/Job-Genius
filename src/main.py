@@ -2,12 +2,13 @@
 import logging
 import streamlit as st
 import debugpy
+from sqlalchemy.orm import joinedload
 
 from sidebar_processor import update_sidebar, get_current_filters
 from search_jobs import start_job_search
-from display_jobs import process_results
+from display_jobs import process_results, show_jobs
 
-from models_sql import init_db
+from models_sql import init_db, Session, Job, Profile
 from db_profiles import get_all_profiles, load_profile, save_profile
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -27,6 +28,51 @@ if "job_id_list" not in st.session_state:
 
 with st.sidebar:
     update_sidebar()
+
+if st.session_state.get("show_favorites_pane"):
+
+    st.header("⭐ Your Favorite Jobs")
+
+    profile_name = st.session_state.get("selected_profile", "")
+    if not profile_name:
+        st.warning("Please select a profile to view favorites.")
+    else:
+
+        with Session() as db:
+
+            profile = db.query(Profile).filter(Profile.name == profile_name).first()
+
+            if not profile or not profile.favorite_job_ids:
+                st.info("You haven't marked any jobs as favorite yet.")
+            else:
+
+                jobs = (
+                    db.query(Job)
+                    .options(joinedload(Job.company))
+                    .filter(Job.job_id.in_(profile.favorite_job_ids))
+                    .all()
+                )
+
+                show_jobs(jobs, key_prefix="fav")
+
+        if st.button("⬅️ Back to Search", key="back_from_favorite"):
+            st.session_state.show_favorites_pane = False
+            st.rerun()
+
+        st.divider()
+
+
+if "llm_response" in st.session_state and st.session_state["llm_response"]:
+
+    st.markdown("### 🤖 Assistant Response")
+    st.markdown(st.session_state["llm_response"])
+
+    if st.button("⬅️ Back to Search", key="back_from_llm_response"):
+        st.session_state["llm_response"] = None
+        st.rerun()
+
+    st.divider()
+
 
 if st.button("🚀 Search Jobs"):
     with st.spinner("Searching..."):

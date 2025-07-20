@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, BigInteger, Float, JSON
 from sqlalchemy import ForeignKey
 from sqlalchemy import LargeBinary
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -112,6 +113,8 @@ class Profile(Base):
     longitude = Column(Float, nullable=True)
 
     filter_data = Column(JSON, nullable=False)
+
+    favorite_job_ids = Column(MutableList.as_mutable(ARRAY(String)), default=list)
 
     resume_filename = Column(String, nullable=True)
     resume_binary = Column(LargeBinary, nullable=True)

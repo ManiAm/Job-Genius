@@ -9,7 +9,8 @@ import phonenumbers
 from phonenumbers import PhoneNumberFormat
 
 import config
-from models_sql import Session, Job
+from models_sql import Session, Job, Profile
+from db_profiles import update_favorite_job
 from finnhub_api import Finnhub_REST_API_Client
 
 stock_client = Finnhub_REST_API_Client(url="https://finnhub.io/api", api_ver="v1")
@@ -20,9 +21,16 @@ def process_results(job_id_list, profile_data):
     db_session = Session()
     job_list = db_session.query(Job).filter(Job.job_id.in_(job_id_list)).all()
 
-    final_result_list = update_filter_bar(job_list)
-    update_job_map(final_result_list, profile_data)
-    display_jobs(final_result_list)
+    visible_jobs = update_filter_bar(job_list)
+
+    visible_job_ids = [job.job_id for job in visible_jobs if job.job_id]
+    st.session_state["visible_job_ids"] = visible_job_ids
+
+    update_job_map(visible_jobs, profile_data)
+
+    st.success(f"Found {len(job_list)} jobs")
+
+    show_jobs(visible_jobs)
 
 
 def update_filter_bar(job_list):
@@ -181,16 +189,7 @@ def update_job_map(job_list, profile_data):
     ))
 
 
-def display_jobs(job_list):
-
-    if "llm_response" in st.session_state and st.session_state["llm_response"]:
-        st.markdown("### 🤖 Assistant Response")
-        st.markdown(st.session_state["llm_response"])
-        st.divider()
-
-    st.success(f"Found {len(job_list)} jobs")
-
-    visible_job_ids = []
+def show_jobs(job_list, key_prefix="main"):
 
     for job in job_list:
 
@@ -227,86 +226,115 @@ def display_jobs(job_list):
         else:
             posted = "Unknown"
 
-        stock_key = f"stock_info_{job_id}"
-        show_key = f"show_company_info_{job_id}"
+        company_key = f"{key_prefix}_btn_{job_id}"
+        show_key = f"{key_prefix}_show_company_info_{job_id}"
+        stock_key = f"{key_prefix}_stock_info_{job_id}"
 
-        label = f"💼 **{job_title}** - {location} - {company} - *Posted {posted}*"
+        cols = st.columns([0.93, 0.07])
 
-        with st.expander(label, expanded=False):
+        with cols[0]:
 
-            logo_url = job.company.logo_url if job.company and job.company.logo_url else None
-            if logo_url:
-                st.image(logo_url, width=50)
+            label = f"💼 **{job_title}** - {location} - {company} - *Posted {posted}*"
 
-            st.markdown(f"**🏢 Company:** {company}")
+            with st.expander(label, expanded=False):
 
-            if st.button(f"🔍 Show More About the Company", key=f"btn_{job_id}"):
-                st.session_state[show_key] = not st.session_state.get(show_key, False)
+                logo_url = job.company.logo_url if job.company and job.company.logo_url else None
+                if logo_url:
+                    st.image(logo_url, width=50)
 
-            if st.session_state.get(show_key, False):
+                st.markdown(f"**🏢 Company:** {company}")
 
-                if stock_key not in st.session_state:
-                    with st.spinner("Fetching company details..."):
-                        st.session_state[stock_key] = get_stock_details(company)
+                if st.button(f"🔍 Show More About the Company", key=company_key):
+                    st.session_state[show_key] = not st.session_state.get(show_key, False)
 
-                stock_info = st.session_state.get(stock_key)
+                if st.session_state.get(show_key, False):
 
-                if stock_info:
+                    if stock_key not in st.session_state:
+                        with st.spinner("Fetching company details..."):
+                            st.session_state[stock_key] = get_stock_details(company)
 
-                    st.markdown("#### 🏢 Company Profile")
+                    stock_info = st.session_state.get(stock_key)
 
-                    logo_url = stock_info.get("logo", "")
-                    if logo_url:
-                        st.image(logo_url, width=60)
+                    if stock_info:
 
-                    quote = stock_info.get("quote", {})
-                    peers = stock_info.get("peers", [])
-                    latest_news = stock_info.get("news", [])
+                        st.markdown("#### 🏢 Company Profile")
 
-                    international = 'N/A'
-                    raw_number = stock_info.get('phone')
-                    if raw_number:
-                        parsed_number = phonenumbers.parse(raw_number, "US")
-                        international = phonenumbers.format_number(parsed_number, PhoneNumberFormat.INTERNATIONAL)
+                        logo_url = stock_info.get("logo", "")
+                        if logo_url:
+                            st.image(logo_url, width=60)
 
-                    st.markdown(f"**🏢 Name:** {stock_info.get('name', 'N/A')}")
-                    st.markdown(f"**🌍 Country:** {stock_info.get('country', 'N/A')}")
-                    st.markdown(f"**🏭 Industry:** {stock_info.get('finnhubIndustry', 'N/A')}")
-                    st.markdown(f"**📞 Phone:** {international}")
-                    st.markdown(f"**🌐 Website:** {stock_info.get('weburl')}")
-                    st.markdown(f"**🏷️ Ticker:** {stock_info.get('ticker', 'N/A')}")
-                    st.markdown(f"**💲 Stock Price:** {quote.get('c', 'N/A')}")
-                    st.markdown(f"**👥 Peers:** {', '.join(peers) if peers else 'N/A'}")
+                        quote = stock_info.get("quote", {})
+                        peers = stock_info.get("peers", [])
+                        latest_news = stock_info.get("news", [])
 
-                    if latest_news:
-                        st.markdown("### 📰 Latest News")
-                        for article in latest_news:
-                            headline = article.get("headline", "No title")
-                            url = article.get("url", "#")
-                            dt = datetime.utcfromtimestamp(article["datetime"]).strftime("%Y-%m-%d %H:%M UTC")
-                            with st.container():
-                                st.markdown(f"**[{headline}]({url})** at *{dt}*")
+                        international = 'N/A'
+                        raw_number = stock_info.get('phone')
+                        if raw_number:
+                            parsed_number = phonenumbers.parse(raw_number, "US")
+                            international = phonenumbers.format_number(parsed_number, PhoneNumberFormat.INTERNATIONAL)
+
+                        st.markdown(f"**🏢 Name:** {stock_info.get('name', 'N/A')}")
+                        st.markdown(f"**🌍 Country:** {stock_info.get('country', 'N/A')}")
+                        st.markdown(f"**🏭 Industry:** {stock_info.get('finnhubIndustry', 'N/A')}")
+                        st.markdown(f"**📞 Phone:** {international}")
+                        st.markdown(f"**🌐 Website:** {stock_info.get('weburl')}")
+                        st.markdown(f"**🏷️ Ticker:** {stock_info.get('ticker', 'N/A')}")
+                        st.markdown(f"**💲 Stock Price:** {quote.get('c', 'N/A')}")
+                        st.markdown(f"**👥 Peers:** {', '.join(peers) if peers else 'N/A'}")
+
+                        if latest_news:
+                            st.markdown("### 📰 Latest News")
+                            for article in latest_news:
+                                headline = article.get("headline", "No title")
+                                url = article.get("url", "#")
+                                dt = datetime.utcfromtimestamp(article["datetime"]).strftime("%Y-%m-%d %H:%M UTC")
+                                with st.container():
+                                    st.markdown(f"**[{headline}]({url})** at *{dt}*")
+                    else:
+                        st.warning("This company is not publicly traded or financial data is unavailable.")
+
+                st.markdown(f"**📍 Location:** {location}")
+                st.markdown(f"**🧾 Employment Type:** {employment_type}")
+                st.markdown(f"**💰 Estimated Salary:** {estimated_salary}")
+                st.markdown(f"**🕓 Posted:** {posted}")
+                st.markdown(f"**🔗 [Job Link]({job.apply_link or '#'})**")
+
+                job_summary = job.job_summary
+                if job_summary:
+                    st.markdown("#### ✨ Job Highlights")
+                    st.markdown(job_summary)
                 else:
-                    st.warning("This company is not publicly traded or financial data is unavailable.")
+                    highlights = job.job_highlights
+                    if highlights:
+                        st.markdown("#### ✨ Job Highlights")
+                        for section, bullets in highlights.items():
+                            st.markdown(f"**{section}**")
+                            for item in bullets:
+                                single_line = item.replace("\n", " ").strip()
+                                st.markdown(f"- {single_line}")
 
-            st.markdown(f"**📍 Location:** {location}")
-            st.markdown(f"**🧾 Employment Type:** {employment_type}")
-            st.markdown(f"**💰 Estimated Salary:** {estimated_salary}")
-            st.markdown(f"**🕓 Posted:** {posted}")
-            st.markdown(f"**🔗 [Job Link]({job.apply_link or '#'})**")
+        with cols[1]:
 
-            highlights = job.job_highlights or {}
-            if highlights:
-                st.markdown("#### ✨ Job Highlights")
-                for section, bullets in highlights.items():
-                    st.markdown(f"**{section}**")
-                    for item in bullets:
-                        single_line = item.replace("\n", " ").strip()
-                        st.markdown(f"- {single_line}")
+            profile_name = st.session_state.get("selected_profile", "")
 
-        visible_job_ids.append(job_id)
+            if "favorite_jobs" not in st.session_state:
 
-    st.session_state["visible_job_ids"] = visible_job_ids
+                # Sync with DB at first access
+                with Session() as db:
+                    profile = db.query(Profile).filter(Profile.name == profile_name).first()
+                    st.session_state.favorite_jobs = set(profile.favorite_job_ids or [])
+
+            is_fav = job_id in st.session_state.favorite_jobs
+            fav_key = f"{key_prefix}_fav_{job_id}_toggle"
+            fav_state = st.toggle("🤍", value=is_fav, key=fav_key, help="Mark as favorite")
+
+            if fav_state != is_fav:
+                if fav_state:
+                    st.session_state.favorite_jobs.add(job_id)
+                    update_favorite_job(profile_name, job_id, add=True)
+                else:
+                    st.session_state.favorite_jobs.discard(job_id)
+                    update_favorite_job(profile_name, job_id, add=False)
 
 
 def get_stock_details(company_name):

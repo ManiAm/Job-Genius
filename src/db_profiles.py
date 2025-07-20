@@ -66,6 +66,7 @@ def save_profile(
 
             profile = Profile(
                 name=profile_name,
+                my_location=my_location,
                 latitude=latitude,
                 longitude=longitude,
                 filter_data=filter_data,
@@ -111,3 +112,21 @@ def clear_resume(profile_name):
     finally:
         session.close()
 
+
+def update_favorite_job(profile_name, job_id, add: bool):
+
+    with Session() as db:
+
+        profile = db.query(Profile).filter(Profile.name == profile_name).first()
+        if not profile:
+            return
+
+        favs = profile.favorite_job_ids or []
+
+        if add and job_id not in favs:
+            favs.append(job_id)
+        elif not add and job_id in favs:
+            favs.remove(job_id)
+
+        profile.favorite_job_ids = favs
+        db.commit()
