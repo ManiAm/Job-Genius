@@ -51,7 +51,8 @@ def send_prompt_to_llm(user_prompt):
     collection_name = f"jobs_{config.embed_model}_{batch_id}"
     collection_name = re.sub(r"[^a-zA-Z0-9_-]", "_", collection_name)
 
-    with st.status("Analyzing job context and generating advice...", expanded=True) as st_status:
+    num_jobs = len(visible_job_ids)
+    with st.status(f"Analyzing {num_jobs} job context and generating advice...", expanded=True) as st_status:
 
         if not rag_search_remote.is_healthy():
             return False, "RAG-Talk is not reachable"

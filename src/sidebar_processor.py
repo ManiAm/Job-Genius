@@ -38,15 +38,14 @@ def update_sidebar():
 
     all_profiles = get_all_profiles()
 
-    # Use currently selected profile if valid, otherwise default to "default"
-    current_selection = st.session_state.get("selected_profile", "default")
-    if current_selection not in all_profiles:
-        current_selection = "default"
+    # Validate the default index based on session_state, but pass via index
+    default_profile = st.session_state.get("selected_profile", "default")
+    default_index = all_profiles.index(default_profile) if default_profile in all_profiles else 0
 
     selected_profile = st.selectbox(
         "Select Profile",
         options=all_profiles,
-        index=all_profiles.index(current_selection),
+        index=default_index,
         key="selected_profile"
     )
 
@@ -61,6 +60,16 @@ def update_sidebar():
 
     ##############
 
+    st.sidebar.header("⭐ Favorites")
+
+    if "show_favorites_pane" not in st.session_state:
+        st.session_state.show_favorites_pane = False
+
+    if st.sidebar.button("📝 View Favorite Jobs"):
+        st.session_state.show_favorites_pane = True
+
+    ##############
+
     st.header("📍 Location")
 
     my_location = profile_data.get("my_location", None)
@@ -71,16 +80,6 @@ def update_sidebar():
         key="my_location",
         on_change=create_location_callback
     )
-
-    ##############
-
-    st.sidebar.header("⭐ Favorites")
-
-    if "show_favorites_pane" not in st.session_state:
-        st.session_state.show_favorites_pane = False
-
-    if st.sidebar.button("📝 View Favorite Jobs"):
-        st.session_state.show_favorites_pane = True
 
     ##############
 

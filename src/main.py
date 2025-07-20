@@ -74,15 +74,17 @@ if "llm_response" in st.session_state and st.session_state["llm_response"]:
     st.divider()
 
 
+# Search for jobs
 if st.button("🚀 Search Jobs"):
     with st.spinner("Searching..."):
         st.session_state["llm_response"] = None
         start_job_search()
 
+# Displaying jobs
 if st.session_state["job_id_list"]:
-    selected_profile = st.session_state.get("selected_profile", "default")
-    profile_data = load_profile(selected_profile)
     job_id_list = st.session_state["job_id_list"]
+    s_profile = st.session_state.get("selected_profile", "default")
+    profile_data = load_profile(s_profile)
     process_results(job_id_list, profile_data)
 
 # if "debugger_active" not in st.session_state:

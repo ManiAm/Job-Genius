@@ -1,5 +1,6 @@
 
 import math
+import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 import streamlit as st
@@ -21,14 +22,23 @@ def process_results(job_id_list, profile_data):
     db_session = Session()
     job_list = db_session.query(Job).filter(Job.job_id.in_(job_id_list)).all()
 
-    visible_jobs = update_filter_bar(job_list)
+    ###############
+
+    st.markdown("### 🔍 Refine Results")
+
+    search_term = st.text_input("Search Jobs", placeholder="Type keyword, company, skill, etc.")
+    visible_jobs = filter_jobs_by_search(job_list, search_term)
+
+    visible_jobs = update_filter_bar(visible_jobs)
+
+    ###############
 
     visible_job_ids = [job.job_id for job in visible_jobs if job.job_id]
     st.session_state["visible_job_ids"] = visible_job_ids
 
-    update_job_map(visible_jobs, profile_data)
+    st.success(f"Found {len(visible_jobs)} jobs")
 
-    st.success(f"Found {len(job_list)} jobs")
+    update_job_map(visible_jobs, profile_data)
 
     show_jobs(visible_jobs)
 
@@ -66,7 +76,6 @@ def update_filter_bar(job_list):
         return ["All"] + sorted([f"{k} ({v})" for k, v in counter.items()])
 
     # Step 3: Build UI with filtered options
-    st.markdown("### 🔍 Refine Results")
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -109,6 +118,30 @@ def update_filter_bar(job_list):
     return final_result_list
 
 
+def filter_jobs_by_search(visible_jobs, search_term):
+
+    if not search_term:
+        return visible_jobs
+
+    pattern = re.compile(rf"\b{re.escape(search_term.lower())}\b")
+
+    filtered = []
+
+    for job in visible_jobs:
+
+        fields = [
+            (job.title or "").lower(),
+            (job.description or "").lower(),
+            (job.job_summary or "").lower(),
+            (job.company.name.lower() if job.company else "")
+        ]
+
+        if any(pattern.search(field) for field in fields):
+            filtered.append(job)
+
+    return filtered
+
+
 def update_job_map(job_list, profile_data):
 
     data = [
@@ -121,6 +154,10 @@ def update_job_map(job_list, profile_data):
     ]
 
     df = pd.DataFrame(data)
+
+    if df.empty:
+        show_empty_map()
+        return
 
     # Add your current location
     my_latitude = profile_data.get("latitude")
@@ -189,9 +226,25 @@ def update_job_map(job_list, profile_data):
     ))
 
 
+def show_empty_map():
+
+    view_state = pdk.ViewState(
+        latitude=39.5,
+        longitude=-98.35,
+        zoom=3,
+        pitch=0
+    )
+
+    st.pydeck_chart(pdk.Deck(
+        map_style=config.map_style_location,
+        initial_view_state=view_state,
+        layers=[]
+    ))
+
+
 def show_jobs(job_list, key_prefix="main"):
 
-    for job in job_list:
+    for idx, job in enumerate(job_list):
 
         job_id = job.job_id
         job_title = job.title or "N/A"
@@ -234,7 +287,7 @@ def show_jobs(job_list, key_prefix="main"):
 
         with cols[0]:
 
-            label = f"💼 **{job_title}** - {location} - {company} - *Posted {posted}*"
+            label = f"💼 {idx+1}. **{job_title}** - {location} - {company} - *Posted {posted}*"
 
             with st.expander(label, expanded=False):
 
@@ -326,7 +379,12 @@ def show_jobs(job_list, key_prefix="main"):
 
             is_fav = job_id in st.session_state.favorite_jobs
             fav_key = f"{key_prefix}_fav_{job_id}_toggle"
-            fav_state = st.toggle("🤍", value=is_fav, key=fav_key, help="Mark as favorite")
+
+            fav_state = st.toggle(
+                " ",
+                value=is_fav,
+                key=fav_key,
+                help="Mark as favorite")
 
             if fav_state != is_fav:
                 if fav_state:

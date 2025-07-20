@@ -322,6 +322,12 @@ def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
 
     with st.status("Storing Embeddings...", expanded=True) as st_status:
 
+        st.write(f"Loading embedding model: {config.embed_model}...")
+
+        status, output = rag_search_remote.load_model([config.embed_model])
+        if not status:
+            return False, f"Cannot load model: {output}"
+
         st.write(f"Creating collection {collection_name}...")
 
         status, output = rag_search_remote.create_collection(
