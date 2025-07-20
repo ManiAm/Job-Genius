@@ -26,7 +26,8 @@ def process_results(job_id_list, profile_data):
 
     st.markdown("### 🔍 Refine Results")
 
-    search_term = st.text_input("Search Jobs", placeholder="Type keyword, company, skill, etc.")
+    st.text_input("Search Jobs", placeholder="Type keyword, company, skill, etc.", key="search_term")
+    search_term = st.session_state.get("search_term", "")
     visible_jobs = filter_jobs_by_search(job_list, search_term)
 
     visible_jobs = update_filter_bar(visible_jobs)

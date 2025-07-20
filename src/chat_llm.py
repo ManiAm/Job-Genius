@@ -37,6 +37,9 @@ def send_prompt_to_llm(user_prompt):
     if not visible_job_ids:
         return False, "No job listings are currently visible to reference."
 
+    if not rag_search_remote.is_healthy():
+        return False, "RAG-Talk is not reachable"
+
     ###########
 
     global instructions
@@ -53,9 +56,6 @@ def send_prompt_to_llm(user_prompt):
 
     num_jobs = len(visible_job_ids)
     with st.status(f"Analyzing {num_jobs} job context and generating advice...", expanded=True) as st_status:
-
-        if not rag_search_remote.is_healthy():
-            return False, "RAG-Talk is not reachable"
 
         st.write(f"Loading embedding model: {config.embed_model}...")
 

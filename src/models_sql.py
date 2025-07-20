@@ -108,6 +108,8 @@ class Profile(Base):
     name = Column(String, nullable=False, unique=True)
     added_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    is_active = Column(Boolean, default=False)
+
     my_location = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)

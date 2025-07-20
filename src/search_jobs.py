@@ -98,6 +98,7 @@ def start_job_search():
             try_count += 1
             time.sleep(3)
 
+    status_placeholder.empty()
     insert_jobs_db(result_list)
 
     job_ids = [job["job_id"] for job in result_list if "job_id" in job]

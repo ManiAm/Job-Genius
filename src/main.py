@@ -9,7 +9,7 @@ from search_jobs import start_job_search
 from display_jobs import process_results, show_jobs
 
 from models_sql import init_db, Session, Job, Profile
-from db_profiles import get_all_profiles, load_profile, save_profile
+from db_profiles import get_all_profiles, load_profile, save_profile, set_active_profile
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ init_db()
 
 if "default" not in get_all_profiles():
     save_profile("default", filter_data=get_current_filters())
+    set_active_profile("default")
 
 st.set_page_config(page_title="Job-Genius", layout="wide")
 

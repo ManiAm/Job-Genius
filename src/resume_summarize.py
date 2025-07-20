@@ -98,6 +98,10 @@ def summarize_resume():
 
             summarization_prompt_final = summarization_resume_prompt + "\n\n" + resume_text
 
+            if not rag_search_remote.is_healthy():
+                st.error("RAG-Talk is not reachable")
+                return
+
             status, output = rag_search_remote.llm_chat(
                 summarization_prompt_final,
                 config.llm_model_summarization,

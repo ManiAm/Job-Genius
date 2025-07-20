@@ -16,7 +16,7 @@ Given the following job posting, extract and summarize the following structured 
 
 1. **Role Overview** - What are the primary responsibilities and objectives of the position?
 2. **Experience Level** - Determine whether the role is Intern, Entry-Level, Junior, Mid-Level, Senior, Lead / Staff, Principal / Architect or Executive.
-3. **Required Skills & Technologies** - List the core skills, tools, or technologies mentioned or implied.
+3. **Required Skills & Technologies** - List **all technologies**, tools, programming languages, and frameworks mentioned (including scripting or backend tools).
 4. **Preferred Experience or Qualifications** - Summarize any additional desirable qualifications.
 5. **Company or Role Highlights** - Mention any unique benefits, perks, or noteworthy aspects of the company or role.
 
@@ -34,6 +34,9 @@ def summarize_and_embed():
     visible_job_ids = st.session_state.get("visible_job_ids")
     if not visible_job_ids:
         return False, "No job listings are currently visible to reference."
+
+    if not rag_search_remote.is_healthy():
+        return False, "RAG-Talk is not reachable"
 
     batch_id = compute_batch_id(visible_job_ids)
 
@@ -113,11 +116,6 @@ def summarize_and_embed_jobs(db_session, visible_job_ids):
 
 
 def summarized_emails(db_session, jobs_not_summarized):
-
-    if not rag_search_remote.is_healthy():
-        return False, "RAG-Talk is not reachable"
-
-    #############
 
     status, output = rag_search_remote.get_llm_models()
     if not status:
@@ -240,9 +238,6 @@ def extract_job_body(job, include_highlights=True):
 
 def embed_emails(db_session, jobs_not_embedded):
 
-    if not rag_search_remote.is_healthy():
-        return False, "RAG-Talk is not reachable"
-
     with st.status("Start Embedding...", expanded=True) as st_status:
 
         st.write(f"Loading embedding model: {config.embed_model}...")
@@ -316,9 +311,6 @@ def get_max_characters_embedding(embed_model):
 
 
 def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
-
-    if not rag_search_remote.is_healthy():
-        return False, "RAG-Talk is not reachable"
 
     with st.status("Storing Embeddings...", expanded=True) as st_status:
 

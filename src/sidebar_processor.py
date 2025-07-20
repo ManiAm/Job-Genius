@@ -10,11 +10,11 @@ from sqlalchemy import delete
 import config
 from models_sql import Session, Job, JobEmbedding
 from locale_utils import get_countries, get_languages
-from db_profiles import get_all_profiles, load_profile, save_profile, clear_resume
+from db_profiles import get_all_profiles, load_profile, save_profile, set_active_profile, get_active_profile, clear_resume
 from models_redis import redis_client
 from job_embedder import summarize_and_embed
 from chat_llm import send_prompt_to_llm
-from resume_embedder import summarize_resume
+from resume_summarize import summarize_resume
 
 
 employment_type_options = {
@@ -38,25 +38,29 @@ def update_sidebar():
 
     all_profiles = get_all_profiles()
 
-    # Validate the default index based on session_state, but pass via index
-    default_profile = st.session_state.get("selected_profile", "default")
-    default_index = all_profiles.index(default_profile) if default_profile in all_profiles else 0
+    if not all_profiles:
+        st.error("No user profile found!")
+        sys.exit(1)
 
-    selected_profile = st.selectbox(
+    active_profile_name = get_active_profile()
+    active_profile_index = all_profiles.index(active_profile_name)
+
+    st.selectbox(
         "Select Profile",
         options=all_profiles,
-        index=default_index,
-        key="selected_profile"
+        index=active_profile_index,
+        key="selected_profile",
+        on_change=profile_change_callback
     )
 
-    profile_name = st.text_input(
+    st.text_input(
         "Create New Profile",
         placeholder="Enter name and press Enter",
         key="profile_name",
         on_change=create_profile_callback
     )
 
-    profile_data = load_profile(selected_profile)
+    profile_data = load_profile(active_profile_name)
 
     ##############
 
@@ -191,44 +195,38 @@ def update_sidebar():
 
     ##############
 
+    st.divider()
+
     st.header("📄 Resume Upload")
 
-    profile_name = st.session_state.get("selected_profile", "")
+    profile = load_profile(active_profile_name)
 
-    if not profile_name:
+    if profile and profile["resume_filename"]:
 
-        st.warning("Please select or create a profile before uploading your resume.")
+        st.success(f"📎 Resume attached: {profile['resume_filename']}")
+
+        if st.button("❌ Remove Resume", key="remove_resume"):
+
+            # Clear resume data in profile
+            clear_resume(active_profile_name)
+
+            # Refresh to show upload prompt again
+            st.rerun()
 
     else:
 
-        profile = load_profile(profile_name)
+        uploaded_file = st.file_uploader("Upload your resume", key="resume_upload")
 
-        if profile and profile["resume_filename"]:
+        if uploaded_file:
 
-            st.success(f"📎 Resume attached: {profile['resume_filename']}")
+            resume_filename = uploaded_file.name
+            resume_bytes = uploaded_file.read()
 
-            if st.button("❌ Remove Resume", key="remove_resume"):
+            save_profile(active_profile_name, resume_filename=resume_filename, resume_binary=resume_bytes)
+            summarize_resume()
 
-                # Clear resume data in profile
-                clear_resume(profile_name)
-
-                # Refresh to show upload prompt again
-                st.rerun()
-
-        else:
-
-            uploaded_file = st.file_uploader("Upload your resume", key="resume_upload")
-
-            if uploaded_file:
-
-                resume_filename = uploaded_file.name
-                resume_bytes = uploaded_file.read()
-
-                save_profile(profile_name, resume_filename=resume_filename, resume_binary=resume_bytes)
-                summarize_resume()
-
-                # Refresh to show attached resume
-                st.rerun()
+            # Refresh to show attached resume
+            st.rerun()
 
     ##############
 
@@ -297,6 +295,12 @@ def update_sidebar():
             st.error(f"❌ Failed to clear embeddings: {e}")
 
 
+def profile_change_callback():
+
+    selected = st.session_state["selected_profile"]
+    set_active_profile(selected)
+
+
 def create_profile_callback():
 
     name = st.session_state.get("profile_name", "").strip()
@@ -313,9 +317,10 @@ def create_profile_callback():
         return
 
     save_profile(name, filter_data=get_current_filters())
+    set_active_profile(name)
 
+    # clear the input box
     st.session_state["profile_name"] = ""
-    st.session_state["selected_profile"] = name
 
 
 def is_valid_profile_name(name):
@@ -325,9 +330,9 @@ def is_valid_profile_name(name):
 def create_location_callback():
 
     my_location = st.session_state.get("my_location", "").strip()
-    selected_profile = st.session_state.get("selected_profile")
+    active_profile_name = get_active_profile()
 
-    if not my_location or not selected_profile:
+    if not my_location or not active_profile_name:
         return
 
     status, output = get_coordinates(my_location)
@@ -338,7 +343,7 @@ def create_location_callback():
     latitude = output[0]
     longitude = output[1]
 
-    save_profile(selected_profile, my_location=my_location, latitude=latitude, longitude=longitude)
+    save_profile(active_profile_name, my_location=my_location, latitude=latitude, longitude=longitude)
 
     alert = st.success(f"📍 Location set: {my_location} ({latitude}, {longitude})")
     time.sleep(3)
@@ -347,9 +352,9 @@ def create_location_callback():
 
 def save_current_filters():
 
-    selected_profile = st.session_state.get("selected_profile")
-    if selected_profile:
-        save_profile(selected_profile, filter_data=get_current_filters())
+    active_profile_name = get_active_profile()
+    if active_profile_name:
+        save_profile(active_profile_name, filter_data=get_current_filters())
 
 
 def get_current_filters():

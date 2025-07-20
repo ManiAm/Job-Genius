@@ -100,9 +100,40 @@ Check the `job-genius` container logs for any issues:
 
 ## Demo
 
-The following demo showcases how users can explore job opportunities backed by semantic search.
+This demo highlights the capabilities of Job-Genius, enabling users to efficiently explore job opportunities powered by semantic search and AI-enhanced matching.
 
 [demo.mp4](https://github.com/user-attachments/assets/ad52c401-27aa-4519-ad6f-8e501ce7ffad)
+
+**Step 1: Create a Profile**
+
+Each user begins by creating a personal profile. Profiles allow you to persist and isolate your job search preferences and configurations. These settings are saved automatically, so when you revisit the application, your preferences will be restored without any additional setup.
+
+**Step 2: Set Your Location**
+
+Next, specify your geographic location. This helps narrow job results to opportunities near you. You can further adjust the maximum distance radius using a slider under the filter section to define how far you’re willing to commute or relocate.
+
+**Step 3: Filter Job Results**
+
+Job filtering is organized into three intuitive levels:
+
+- Level 1: Search Filters (Sidebar): Use the filters in the sidebar to define your job search criteria such as keywords, employment type, remote preference, and more. Once you click "Search Jobs", the app fetches matching results from the JSearch API. These job locations are plotted on an interactive map, with your own location highlighted in green.
+
+- Level 2: Keyword Search (Top Bar): Refine your results by typing keywords into the search bar. This allows you to search within job titles, descriptions, summaries, or company names. Only jobs containing exact keyword matches will be displayed.
+
+- Level 3: Post-Search Filters: After results are displayed, you can narrow them further using dropdowns to filter by company name, job location, or employment type.
+
+**Step 4: Explore and Bookmark Jobs**
+
+Each job listing can be expanded to view detailed information, including company insights and financial data. You can also bookmark jobs using the toggle provided in each listing for future reference.
+
+**Step 5: Use AI Features**
+
+To enable AI-powered resume matching and insights:
+
+- Upload your resume. The system will extract and summarize the resume and store it for future references.
+- All visible jobs are summarized and embedded into a vector database (this is a one-time operation per job).
+
+You can now ask custom questions using the AI prompt sidebar, which leverages your resume and the job context to generate responses.
 
 ## Job Alerts
 

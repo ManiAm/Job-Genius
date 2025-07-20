@@ -9,6 +9,35 @@ def get_all_profiles():
         return [p.name for p in session.scalars(select(Profile)).all()]
 
 
+def set_active_profile(profile_name: str):
+
+    session = Session()
+
+    try:
+        # Set all profiles to inactive
+        session.query(Profile).update({Profile.is_active: False})
+
+        # Set the selected profile to active
+        session.query(Profile).filter(Profile.name == profile_name).update({Profile.is_active: True})
+
+        session.commit()
+
+    finally:
+        session.close()
+
+
+def get_active_profile():
+
+    session = Session()
+
+    try:
+        profile = session.query(Profile).filter_by(is_active=True).first()
+        return profile.name if profile else "default"
+
+    finally:
+        session.close()
+
+
 def load_profile(name):
 
     session = Session()
