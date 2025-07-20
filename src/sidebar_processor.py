@@ -10,9 +10,11 @@ from sqlalchemy import delete
 import config
 from models_sql import Session, Job, JobEmbedding
 from locale_utils import get_countries, get_languages
-from db_profiles import get_all_profiles, load_profile, save_profile
+from db_profiles import get_all_profiles, load_profile, save_profile, clear_resume
 from models_redis import redis_client
-from job_embedder import send_prompt_to_llm
+from job_embedder import summarize_and_embed
+from chat_llm import send_prompt_to_llm
+from resume_embedder import summarize_resume
 
 
 employment_type_options = {
@@ -176,23 +178,48 @@ def update_sidebar():
 
     ##############
 
-    st.slider("Max Jobs", 10, 200, profile_data.get("max_jobs", 100), key="max_jobs", on_change=save_current_filters)
+    st.slider("Max Jobs", 10, 300, profile_data.get("max_jobs", 100), key="max_jobs", on_change=save_current_filters)
 
     ##############
 
     st.header("📄 Resume Upload")
 
-    uploaded_file = st.file_uploader("Upload your resume (PDF, DOCX)", type=["pdf", "docx"], key="resume_upload")
+    profile_name = st.session_state.get("selected_profile", "")
 
-    if uploaded_file:
+    if not profile_name:
 
-        profile_name = st.session_state.get("selected_profile", "")
+        st.warning("Please select or create a profile before uploading your resume.")
 
-        if not profile_name:
-            st.error("Please select or create a profile before uploading your resume.")
+    else:
+
+        profile = load_profile(profile_name)
+
+        if profile and profile["resume_filename"]:
+
+            st.success(f"📎 Resume attached: {profile['resume_filename']}")
+
+            if st.button("❌ Remove Resume", key="remove_resume"):
+
+                # Clear resume data in profile
+                clear_resume(profile_name)
+
+                # Refresh to show upload prompt again
+                st.rerun()
+
         else:
-            save_profile(profile_name, resume=uploaded_file.read())
-            st.success("✅ Resume uploaded and saved to your profile.")
+
+            uploaded_file = st.file_uploader("Upload your resume", key="resume_upload")
+
+            if uploaded_file:
+
+                resume_filename = uploaded_file.name
+                resume_bytes = uploaded_file.read()
+
+                save_profile(profile_name, resume_filename=resume_filename, resume_binary=resume_bytes)
+                summarize_resume()
+
+                # Refresh to show attached resume
+                st.rerun()
 
     ##############
 
@@ -205,10 +232,19 @@ def update_sidebar():
     )
 
     if st.button("💬 Ask LLM", key="ask_llm_btn"):
+
         if user_prompt.strip():
-            response = send_prompt_to_llm(user_prompt)
-            if response:
-                st.session_state["llm_response"] = response
+
+            status, output = summarize_and_embed()
+            if not status:
+                st.warning(output)
+            else:
+                status, output = send_prompt_to_llm(user_prompt)
+                if not status:
+                    st.warning(output)
+                else:
+                    st.session_state["llm_response"] = output
+
         else:
             st.warning("Please enter a prompt before submitting.")
 

@@ -39,7 +39,7 @@ Despite its functionality, "Google for Jobs" does not offer a public API. Unlike
 
 JSearch also provides a generous free tier, allowing developers to test and integrate the API without requiring upfront payment or credit card details. It is more cost-effective and reduces development and operational costs, as well as accelerates the development process by eliminating the need to collect, structure, and maintain our own data on the frontend.
 
-## Architecture
+## System Architecture
 
 Job-Genius is architected as a modular job discovery platform that integrates multiple data sources and services to provide users with a personalized and enriched job search experience.
 
@@ -103,10 +103,6 @@ Check the `job-genius` container logs for any issues:
 The following demo showcases how users can explore job opportunities backed by semantic search.
 
 [demo.mp4](https://github.com/user-attachments/assets/ad52c401-27aa-4519-ad6f-8e501ce7ffad)
-
-## Resume Match Score
-
-todo
 
 ## Job Alerts
 

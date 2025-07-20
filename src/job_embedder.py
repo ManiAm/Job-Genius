@@ -9,7 +9,7 @@ import rag_search_remote
 from models_sql import Session, Job, JobEmbedding
 
 
-summarization_prompt = """
+summarization_job_prompt = """
 You are an intelligent and helpful career assistant trained to extract key insights from job postings to help candidates quickly assess fit and interest.
 
 Given the following job posting, extract and summarize the following structured information:
@@ -26,30 +26,14 @@ Given the following job posting, extract and summarize the following structured 
 - Ensure accuracy and do not assume unlisted technologies or details.
 
 Here is the job text:
-
 """
 
-instructions = """
-You are a professional Job Advisor assisting users in evaluating job opportunities.
-You will be given context documents (retrieved job descriptions, highlights, company details, etc.) along with a user's question or preference.
-Use only the provided context to guide your response - do not make up details that are not explicitly mentioned.
 
-Your goal is to help the user make an informed career decision. Specifically:
-- Understand the user's priorities (e.g., remote work, salary, benefits, skills match, company size).
-- Extract and compare relevant information from the job postings.
-- Explain trade-offs clearly (e.g., stability vs. growth, salary vs. flexibility).
-- Recommend the most suitable job based on the user's stated goals.
-
-Be concise, objective, and user-centric.
-If the context is insufficient, tell the user what information is missing.
-"""
-
-def send_prompt_to_llm(user_prompt):
+def summarize_and_embed():
 
     visible_job_ids = st.session_state.get("visible_job_ids")
     if not visible_job_ids:
-        st.warning("No job listings are currently visible to reference.")
-        return None
+        return False, "No job listings are currently visible to reference."
 
     batch_id = compute_batch_id(visible_job_ids)
 
@@ -57,15 +41,13 @@ def send_prompt_to_llm(user_prompt):
 
     ################
 
-    status, output = summarize_and_embed(db_session, visible_job_ids)
+    status, output = summarize_and_embed_jobs(db_session, visible_job_ids)
     if not status:
-        st.warning(output)
-        return None
+        return False, output
 
     status, output = rag_search_remote.get_collections()
     if not status:
-        st.warning(f"get_collections error: {output}")
-        return None
+        return False, f"get_collections error: {output}"
 
     existing_collections = output
 
@@ -83,17 +65,11 @@ def send_prompt_to_llm(user_prompt):
             visible_job_ids)
 
         if not status:
-            st.warning(output)
-            return None
+            return False, output
 
     ################
 
-    status, output = chat_llm(user_prompt, collection_name, batch_id)
-    if not status:
-        st.warning(output)
-        return None
-
-    return output
+    return True, None
 
 
 def compute_batch_id(visible_job_ids: list[str]) -> str:
@@ -103,7 +79,7 @@ def compute_batch_id(visible_job_ids: list[str]) -> str:
     return hashlib.sha256(hash_input).hexdigest()[:16]  # 16-char ID
 
 
-def summarize_and_embed(db_session, visible_job_ids):
+def summarize_and_embed_jobs(db_session, visible_job_ids):
 
     jobs_not_summarized = (
         db_session.query(Job)
@@ -162,7 +138,7 @@ def summarized_emails(db_session, jobs_not_summarized):
 
     #############
 
-    global summarization_prompt
+    global summarization_job_prompt
 
     with st.status("Start Summarization...", expanded=True) as st_status:
 
@@ -170,11 +146,11 @@ def summarized_emails(db_session, jobs_not_summarized):
 
         for job in jobs_not_summarized:
 
-            summarization_prompt_final = summarization_prompt + "\n\n" + extract_job(job)
+            summarization_prompt_final = summarization_job_prompt + "\n\n" + extract_job(job)
 
             if len(summarization_prompt_final) > context_length_characters:
 
-                summarization_prompt_final = summarization_prompt + "\n\n" + extract_job(job, include_highlights=False)
+                summarization_prompt_final = summarization_job_prompt + "\n\n" + extract_job(job, include_highlights=False)
 
                 if len(summarization_prompt_final) > context_length_characters:
                     st.warning(f"job text length exceeds maximum context length {context_length_characters}")
@@ -182,7 +158,7 @@ def summarized_emails(db_session, jobs_not_summarized):
             status, final_summary = rag_search_remote.llm_chat(
                 summarization_prompt_final,
                 config.llm_model_summarization,
-                session_id="llm_combine_summary")
+                session_id="llm_job_summary")
 
             if not status:
                 return False, final_summary
@@ -392,35 +368,3 @@ def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
         st_status.update(label="Storing embedding done!", state="complete", expanded=False)
 
     return True, None
-
-
-def chat_llm(user_prompt, collection_name, batch_id):
-
-    with st.status("Analyzing job context and generating advice...", expanded=True) as st_status:
-
-        if not rag_search_remote.is_healthy():
-            return False, "RAG-Talk is not reachable"
-
-        st.write(f"Loading embedding model: {config.embed_model}...")
-
-        status, output = rag_search_remote.load_model([config.embed_model])
-        if not status:
-            return False, f"Cannot load model: {output}"
-
-        status, output = rag_search_remote.rag_chat(
-            user_prompt,
-            config.llm_model_chat,
-            config.embed_model,
-            collection_name,
-            instructions=instructions,
-            session_id=str(batch_id),
-            score_threshold=0.7,
-            max_documents=10
-        )
-
-        st_status.update(label="Response received!", state="complete", expanded=False)
-
-    if not status:
-        return False, output
-
-    return True, output

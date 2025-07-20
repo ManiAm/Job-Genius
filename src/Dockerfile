@@ -9,7 +9,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     libpq-dev \
-    nano
+    nano \
+    poppler-utils \
+    tesseract-ocr \
+    libmagic1 \
+    libglib2.0-0 \
+    libsm6 libxext6 libxrender-dev
 
 RUN python3 -m venv /opt/venv
 
@@ -27,7 +32,13 @@ RUN pip install \
     phonenumbers \
     redis \
     sqlalchemy \
-    psycopg2-binary
+    psycopg2-binary \
+    python-magic \
+    pytesseract \
+    html2text \
+    pdfplumber \
+    python-docx \
+    Pillow
 
 WORKDIR /app
 

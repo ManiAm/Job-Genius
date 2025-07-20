@@ -36,7 +36,8 @@ if st.button("🚀 Search Jobs"):
 if st.session_state["job_id_list"]:
     selected_profile = st.session_state.get("selected_profile", "default")
     profile_data = load_profile(selected_profile)
-    process_results(st.session_state["job_id_list"], profile_data)
+    job_id_list = st.session_state["job_id_list"]
+    process_results(job_id_list, profile_data)
 
 # if "debugger_active" not in st.session_state:
 #     debugpy.listen(("0.0.0.0", 5678))

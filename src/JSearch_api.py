@@ -114,7 +114,7 @@ class JSearch_REST_API_Client(REST_API_Client):
 
         data_list = output.get("data", [])
 
-        models_redis.set_to_cache(frame, data_list, ttl=5*60*60)  ## TODO: remove this later
+        models_redis.set_to_cache(frame, data_list, ttl=1*60*60)
 
         return True, data_list
 

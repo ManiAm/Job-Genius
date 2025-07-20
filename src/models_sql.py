@@ -113,7 +113,10 @@ class Profile(Base):
 
     filter_data = Column(JSON, nullable=False)
 
-    resume = Column(LargeBinary, nullable=True)
+    resume_filename = Column(String, nullable=True)
+    resume_binary = Column(LargeBinary, nullable=True)
+    resume_text = Column(Text, nullable=True)
+    resume_summary = Column(Text)
 
     def __repr__(self):
         return f"<Profile name={self.name} location={self.my_location}>"
