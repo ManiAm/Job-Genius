@@ -30,6 +30,17 @@ if "job_id_list" not in st.session_state:
 with st.sidebar:
     update_sidebar()
 
+if "llm_response" in st.session_state and st.session_state["llm_response"]:
+
+    st.markdown("### 🤖 Assistant Response")
+    st.markdown(st.session_state["llm_response"])
+
+    if st.button("⬅️ Back to Search", key="back_from_llm_response"):
+        st.session_state["llm_response"] = None
+        st.rerun()
+
+    st.divider()
+
 if st.session_state.get("show_favorites_pane"):
 
     st.header("⭐ Your Favorite Jobs")
@@ -56,23 +67,15 @@ if st.session_state.get("show_favorites_pane"):
 
                 show_jobs(jobs, key_prefix="fav")
 
+                visible_job_ids_fav = [job.job_id for job in jobs if job.job_id]
+                st.session_state["visible_job_ids_fav"] = visible_job_ids_fav
+
         if st.button("⬅️ Back to Search", key="back_from_favorite"):
             st.session_state.show_favorites_pane = False
+            st.session_state["visible_job_ids_fav"] = None
             st.rerun()
 
         st.divider()
-
-
-if "llm_response" in st.session_state and st.session_state["llm_response"]:
-
-    st.markdown("### 🤖 Assistant Response")
-    st.markdown(st.session_state["llm_response"])
-
-    if st.button("⬅️ Back to Search", key="back_from_llm_response"):
-        st.session_state["llm_response"] = None
-        st.rerun()
-
-    st.divider()
 
 
 # Search for jobs

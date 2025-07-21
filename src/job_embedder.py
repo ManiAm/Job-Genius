@@ -29,22 +29,18 @@ Here is the job text:
 """
 
 
-def summarize_and_embed():
-
-    visible_job_ids = st.session_state.get("visible_job_ids")
-    if not visible_job_ids:
-        return False, "No job listings are currently visible to reference."
+def summarize_and_embed(job_ids_to_process):
 
     if not rag_search_remote.is_healthy():
         return False, "RAG-Talk is not reachable"
 
-    batch_id = compute_batch_id(visible_job_ids)
+    batch_id = compute_batch_id(job_ids_to_process)
 
     db_session = Session()
 
     ################
 
-    status, output = summarize_and_embed_jobs(db_session, visible_job_ids)
+    status, output = summarize_and_embed_jobs(db_session, job_ids_to_process)
     if not status:
         return False, output
 
@@ -65,7 +61,7 @@ def summarize_and_embed():
             db_session,
             batch_id,
             collection_name,
-            visible_job_ids)
+            job_ids_to_process)
 
         if not status:
             return False, output
@@ -75,18 +71,18 @@ def summarize_and_embed():
     return True, None
 
 
-def compute_batch_id(visible_job_ids: list[str]) -> str:
+def compute_batch_id(job_ids_to_process: list[str]) -> str:
 
-    sorted_ids = sorted(visible_job_ids)
+    sorted_ids = sorted(job_ids_to_process)
     hash_input = json.dumps(sorted_ids).encode("utf-8")
     return hashlib.sha256(hash_input).hexdigest()[:16]  # 16-char ID
 
 
-def summarize_and_embed_jobs(db_session, visible_job_ids):
+def summarize_and_embed_jobs(db_session, job_ids_to_process):
 
     jobs_not_summarized = (
         db_session.query(Job)
-        .filter(Job.job_id.in_(visible_job_ids), Job.is_summarized==False)
+        .filter(Job.job_id.in_(job_ids_to_process), Job.is_summarized==False)
         .all()
     )
 
@@ -100,7 +96,7 @@ def summarize_and_embed_jobs(db_session, visible_job_ids):
 
     jobs_not_embedded = (
         db_session.query(Job)
-        .filter(Job.job_id.in_(visible_job_ids), Job.is_summarized==True, Job.is_embedded==False)
+        .filter(Job.job_id.in_(job_ids_to_process), Job.is_summarized==True, Job.is_embedded==False)
         .all()
     )
 
@@ -310,7 +306,7 @@ def get_max_characters_embedding(embed_model):
     return True, approx_max_characters
 
 
-def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
+def store_embedding(db_session, batch_id, collection_name, job_ids_to_process):
 
     with st.status("Storing Embeddings...", expanded=True) as st_status:
 
@@ -331,11 +327,11 @@ def store_embedding(db_session, batch_id, collection_name, visible_job_ids):
 
         jobs_embedded = (
             db_session.query(Job)
-            .filter(Job.job_id.in_(visible_job_ids), Job.is_summarized==True, Job.is_embedded==True)
+            .filter(Job.job_id.in_(job_ids_to_process), Job.is_summarized==True, Job.is_embedded==True)
             .all()
         )
 
-        if len(jobs_embedded) != len(visible_job_ids):
+        if len(jobs_embedded) != len(job_ids_to_process):
             return False, "Not all visible jobs were embedded!"
 
         for job in jobs_embedded:

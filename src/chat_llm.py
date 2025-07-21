@@ -31,11 +31,7 @@ Consider resume-job alignment when scoring or recommending jobs.
 """
 
 
-def send_prompt_to_llm(user_prompt):
-
-    visible_job_ids = st.session_state.get("visible_job_ids")
-    if not visible_job_ids:
-        return False, "No job listings are currently visible to reference."
+def send_prompt_to_llm(user_prompt, job_ids_to_process):
 
     if not rag_search_remote.is_healthy():
         return False, "RAG-Talk is not reachable"
@@ -49,19 +45,20 @@ def send_prompt_to_llm(user_prompt):
 
     ###########
 
-    batch_id = compute_batch_id(visible_job_ids)
+    batch_id = compute_batch_id(job_ids_to_process)
 
     collection_name = f"jobs_{config.embed_model}_{batch_id}"
     collection_name = re.sub(r"[^a-zA-Z0-9_-]", "_", collection_name)
 
-    num_jobs = len(visible_job_ids)
-    with st.status(f"Analyzing {num_jobs} job context and generating advice...", expanded=True) as st_status:
+    with st.status(f"Generating advice...", expanded=True) as st_status:
 
         st.write(f"Loading embedding model: {config.embed_model}...")
 
         status, output = rag_search_remote.load_model([config.embed_model])
         if not status:
             return False, f"Cannot load model: {output}"
+
+        st.write(f"Analyzing {len(job_ids_to_process)} job context...")
 
         status, output = rag_search_remote.rag_chat(
             user_prompt,
@@ -96,8 +93,8 @@ def get_user_resume():
     return None
 
 
-def compute_batch_id(visible_job_ids: list[str]) -> str:
+def compute_batch_id(job_ids_to_process: list[str]) -> str:
 
-    sorted_ids = sorted(visible_job_ids)
+    sorted_ids = sorted(job_ids_to_process)
     hash_input = json.dumps(sorted_ids).encode("utf-8")
     return hashlib.sha256(hash_input).hexdigest()[:16]  # 16-char ID

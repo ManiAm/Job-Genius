@@ -244,19 +244,9 @@ def update_sidebar():
     )
 
     if st.button("💬 Ask LLM", key="ask_llm_btn"):
-
-        if user_prompt.strip():
-
-            status, output = summarize_and_embed()
-            if not status:
-                st.warning(output)
-            else:
-                status, output = send_prompt_to_llm(user_prompt)
-                if not status:
-                    st.warning(output)
-                else:
-                    st.session_state["llm_response"] = output
-
+        user_prompt = user_prompt.strip()
+        if user_prompt:
+            process_llm(user_prompt)
         else:
             st.warning("Please enter a prompt before submitting.")
 
@@ -381,3 +371,26 @@ def get_current_filters():
         "distance_radius": st.session_state.get("distance_radius", 50),
         "max_jobs": st.session_state.get("max_jobs", 100)
     }
+
+
+def process_llm(user_prompt):
+
+    visible_job_ids_fav = st.session_state.get("visible_job_ids_fav")
+    visible_job_ids = st.session_state.get("visible_job_ids")
+    visible_job_ids_final = visible_job_ids_fav or visible_job_ids
+
+    if not visible_job_ids_final:
+        st.warning("No job listings are currently visible to reference.")
+        return
+
+    status, output = summarize_and_embed(visible_job_ids_final)
+    if not status:
+        st.warning(output)
+        return
+
+    status, output = send_prompt_to_llm(user_prompt, visible_job_ids_final)
+    if not status:
+        st.warning(output)
+        return
+
+    st.session_state["llm_response"] = output
