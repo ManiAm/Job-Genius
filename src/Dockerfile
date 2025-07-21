@@ -38,7 +38,8 @@ RUN pip install \
     html2text \
     pdfplumber \
     python-docx \
-    Pillow
+    Pillow \
+    cleanco
 
 WORKDIR /app
 

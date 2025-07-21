@@ -8,6 +8,7 @@ import pandas as pd
 import pydeck as pdk
 import phonenumbers
 from phonenumbers import PhoneNumberFormat
+from cleanco import basename
 
 import config
 from models_sql import Session, Job, Profile
@@ -334,7 +335,9 @@ def show_jobs(job_list, key_prefix="main"):
                         st.markdown(f"**🌐 Website:** {stock_info.get('weburl')}")
                         st.markdown(f"**🏷️ Ticker:** {stock_info.get('ticker', 'N/A')}")
                         st.markdown(f"**💲 Stock Price:** {quote.get('c', 'N/A')}")
-                        st.markdown(f"**👥 Peers:** {', '.join(peers) if peers else 'N/A'}")
+                        if peers:
+                            st.markdown("**👥 Peers (sorted by market capitalizations):**")
+                            st.markdown("\n".join(f"- {name}" for name in peers))
 
                         if latest_news:
                             st.markdown("### 📰 Latest News")
@@ -413,11 +416,13 @@ def get_stock_details(company_name):
 
     status, output = stock_client.company_peers(company_symbol)
     if status:
-        stock_info["peers"] = output
+        stock_info["peers"] = enrich_company_peers(output)
 
     status, output = stock_client.quote(company_symbol)
     if status:
         stock_info["quote"] = output
+
+    ###############
 
     to_date = datetime.utcnow().date()
     from_date = to_date - timedelta(days=30)
@@ -442,16 +447,18 @@ def get_stock_details(company_name):
     return stock_info
 
 
-def get_symbol_from_name(name):
+def get_symbol_from_name(company_name):
     """
     Try to resolve a stock symbol from the full or partial company name.
     """
 
-    status, output = stock_client.symbol_lookup(name)
+    company_base_name = basename(company_name)
+
+    status, output = stock_client.symbol_lookup(company_base_name)
     if status and output:
         return True, output[0]["symbol"]
 
-    name_parts = name.split()
+    name_parts = company_base_name.split()
 
     if len(name_parts) > 1:
 
@@ -460,4 +467,31 @@ def get_symbol_from_name(name):
         if status and output:
             return True, output[0]["symbol"]
 
-    return False, f"No symbol found for '{name}'"
+    return False, f"No symbol found for '{company_base_name}'"
+
+
+def enrich_company_peers(peer_list):
+
+    peer_dict = {}
+
+    for peer_ticker in peer_list:
+
+        status, output = stock_client.company_profile2(peer_ticker)
+        if not status:
+            st.error(f"Failed to get company profile from {peer_ticker}")
+            return []
+
+        company_name = output.get("name", None)
+        capitalization = output.get("marketCapitalization", None)
+
+        peer_dict[company_name] = capitalization
+
+    company_names_sorted = [
+        name for name, cap in sorted(
+            peer_dict.items(),
+            key=lambda item: item[1] if item[1] is not None else -1,
+            reverse=True
+        )
+    ]
+
+    return company_names_sorted

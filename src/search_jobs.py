@@ -1,8 +1,10 @@
 
 import time
+import re
 import streamlit as st
 from datetime import datetime, timezone
 from nominatim_api import distance_between_coords
+from cleanco import basename
 
 from locale_utils import get_countries, get_languages
 from sidebar_processor import employment_type_options, experience_options
@@ -153,6 +155,7 @@ def insert_jobs_db(result_list):
 
         # Get or create the company
         company_name = job_data.get("employer_name", "Unknown Company")
+        company_name = normalize_company_name(company_name)
         company = db_session.query(Company).filter_by(name=company_name).first()
 
         if not company:
@@ -196,3 +199,15 @@ def insert_jobs_db(result_list):
         db_session.add(job)
 
     db_session.commit()
+
+
+def normalize_company_name(name: str) -> str:
+
+    name = basename(name)
+    name = name.lower()
+    name = re.sub(r'[\W_]+', ' ', name)  # replaces punctuation + underscores with space
+    name = re.sub(r'\s+', ' ', name)     # collapse spaces
+    name = name.strip()
+    name = name.capitalize()             # Capitalize the first word
+
+    return name

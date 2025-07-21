@@ -195,8 +195,6 @@ def update_sidebar():
 
     ##############
 
-    st.divider()
-
     st.header("📄 Resume Upload")
 
     profile = load_profile(active_profile_name)
@@ -229,6 +227,13 @@ def update_sidebar():
             st.rerun()
 
     ##############
+
+    st.divider()
+
+    if st.button("Enrich Jobs", key="enrich_jobs"):
+        status, output = summarize_and_embed()
+        if not status:
+            st.warning(output)
 
     st.header(f"🤖 Ask the Assistant ({config.llm_model_chat})")
 
