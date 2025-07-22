@@ -285,7 +285,7 @@ def show_jobs(job_list, key_prefix="main"):
         show_key = f"{key_prefix}_show_company_info_{job_id}"
         stock_key = f"{key_prefix}_stock_info_{job_id}"
 
-        cols = st.columns([0.93, 0.07])
+        cols = st.columns([0.77, 0.13, 0.1])
 
         with cols[0]:
 
@@ -385,18 +385,24 @@ def show_jobs(job_list, key_prefix="main"):
             fav_key = f"{key_prefix}_fav_{job_id}_toggle"
 
             fav_state = st.toggle(
-                " ",
+                "Favorite",
                 value=is_fav,
-                key=fav_key,
-                help="Mark as favorite")
+                key=fav_key)
 
             if fav_state != is_fav:
+
                 if fav_state:
                     st.session_state.favorite_jobs.add(job_id)
                     update_favorite_job(profile_name, job_id, add=True)
                 else:
                     st.session_state.favorite_jobs.discard(job_id)
                     update_favorite_job(profile_name, job_id, add=False)
+
+        with cols[2]:
+
+            if st.button("✏️", key=f"use_job_{job.id}", help="Generate resume"):
+                st.session_state["generate_resume"] = job
+                st.rerun()
 
 
 def get_stock_details(company_name):

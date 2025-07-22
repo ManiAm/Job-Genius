@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from sidebar_processor import update_sidebar, get_current_filters
 from search_jobs import start_job_search
 from display_jobs import process_results, show_jobs
+from personalized import resume_cover_letter_builder
 
 from models_sql import init_db, Session, Job, Profile
 from db_profiles import get_all_profiles, load_profile, save_profile, set_active_profile
@@ -30,7 +31,39 @@ if "job_id_list" not in st.session_state:
 with st.sidebar:
     update_sidebar()
 
-if "llm_response" in st.session_state and st.session_state["llm_response"]:
+
+if st.session_state.get("generate_resume"):
+
+    job = st.session_state["generate_resume"]
+
+    if "resume_output" not in st.session_state:
+
+        status, output = resume_cover_letter_builder(job)
+        if not status:
+            st.warning(output)
+            st.stop()
+
+        st.session_state["resume_output"] = output
+
+    else:
+
+        output = st.session_state["resume_output"]
+
+    st.markdown(f"### 🤖 Generated Documents")
+    st.markdown(f"Job: **{job.title}** - {job.company.name}")
+
+    st.download_button("📄 Download Resume", output["resume"], file_name="resume.txt")
+    st.download_button("📄 Download Cover Letter", output["cover_letter"], file_name="cover_letter.txt")
+
+    if st.button("⬅️ Back to Search", key="back_from_generate_resume"):
+        st.session_state.pop("generate_resume", None)
+        st.session_state.pop("resume_output", None)
+        st.rerun()
+
+    st.divider()
+
+
+if st.session_state.get("llm_response"):
 
     st.markdown("### 🤖 Assistant Response")
     st.markdown(st.session_state["llm_response"])
@@ -40,6 +73,7 @@ if "llm_response" in st.session_state and st.session_state["llm_response"]:
         st.rerun()
 
     st.divider()
+
 
 if st.session_state.get("show_favorites_pane"):
 

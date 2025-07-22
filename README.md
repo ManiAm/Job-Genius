@@ -135,6 +135,8 @@ To enable AI-powered resume matching and insights:
 
 You can now ask custom questions using the AI prompt sidebar, which leverages your resume and the job context to generate responses.
 
+For each job, you can now click on "Generate Resume" to create an updated, tailored resume and cover letter based on the specific job description.
+
 ## Job Alerts
 
 todo

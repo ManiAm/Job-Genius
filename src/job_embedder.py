@@ -88,7 +88,7 @@ def summarize_and_embed_jobs(db_session, job_ids_to_process):
 
     if jobs_not_summarized:
 
-        status, output = summarized_emails(db_session, jobs_not_summarized)
+        status, output = summarize_jobs(db_session, jobs_not_summarized)
         if not status:
             return False, output
 
@@ -102,7 +102,7 @@ def summarize_and_embed_jobs(db_session, job_ids_to_process):
 
     if jobs_not_embedded:
 
-        status, output = embed_emails(db_session, jobs_not_embedded)
+        status, output = embed_jobs(db_session, jobs_not_embedded)
         if not status:
             return False, output
 
@@ -111,7 +111,7 @@ def summarize_and_embed_jobs(db_session, job_ids_to_process):
     return True, None
 
 
-def summarized_emails(db_session, jobs_not_summarized):
+def summarize_jobs(db_session, jobs_not_summarized):
 
     status, output = rag_search_remote.get_llm_models()
     if not status:
@@ -232,7 +232,7 @@ def extract_job_body(job, include_highlights=True):
     return parts
 
 
-def embed_emails(db_session, jobs_not_embedded):
+def embed_jobs(db_session, jobs_not_embedded):
 
     with st.status("Start Embedding...", expanded=True) as st_status:
 

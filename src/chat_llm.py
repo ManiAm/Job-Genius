@@ -39,7 +39,7 @@ def send_prompt_to_llm(user_prompt, job_ids_to_process):
     ###########
 
     global instructions
-    resume_summary = get_user_resume()
+    resume_summary = get_resume_summary()
     if resume_summary:
         instructions += instructions_resume + "\n\n" + resume_summary
 
@@ -79,7 +79,7 @@ def send_prompt_to_llm(user_prompt, job_ids_to_process):
     return True, output
 
 
-def get_user_resume():
+def get_resume_summary():
 
     profile_name = st.session_state.get("selected_profile", "")
     if not profile_name:
@@ -89,6 +89,20 @@ def get_user_resume():
         profile = db_session.query(Profile).filter(Profile.name == profile_name).first()
         if profile and profile.resume_summary:
             return profile.resume_summary
+
+    return None
+
+
+def get_resume_text():
+
+    profile_name = st.session_state.get("selected_profile", "")
+    if not profile_name:
+        return None
+
+    with Session() as db_session:
+        profile = db_session.query(Profile).filter(Profile.name == profile_name).first()
+        if profile and profile.resume_text:
+            return profile.resume_text
 
     return None
 

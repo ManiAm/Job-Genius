@@ -295,6 +295,9 @@ def profile_change_callback():
     selected = st.session_state["selected_profile"]
     set_active_profile(selected)
 
+    st.session_state["visible_job_ids"] = None
+    st.session_state["visible_job_ids_fav"] = None
+
 
 def create_profile_callback():
 
