@@ -231,9 +231,13 @@ def update_sidebar():
     st.divider()
 
     if st.button("Enrich Jobs", key="enrich_jobs"):
-        status, output = summarize_and_embed()
-        if not status:
-            st.warning(output)
+        visible_job_ids = get_visible_jobs()
+        if not visible_job_ids:
+            st.warning("No job listings are currently visible to reference.")
+        else:
+            status, output = summarize_and_embed(visible_job_ids)
+            if not status:
+                st.warning(output)
 
     st.header(f"🤖 Ask the Assistant ({config.llm_model_chat})")
 
@@ -378,22 +382,27 @@ def get_current_filters():
 
 def process_llm(user_prompt):
 
-    visible_job_ids_fav = st.session_state.get("visible_job_ids_fav")
-    visible_job_ids = st.session_state.get("visible_job_ids")
-    visible_job_ids_final = visible_job_ids_fav or visible_job_ids
-
-    if not visible_job_ids_final:
+    visible_job_ids = get_visible_jobs()
+    if not visible_job_ids:
         st.warning("No job listings are currently visible to reference.")
         return
 
-    status, output = summarize_and_embed(visible_job_ids_final)
+    status, output = summarize_and_embed(visible_job_ids)
     if not status:
         st.warning(output)
         return
 
-    status, output = send_prompt_to_llm(user_prompt, visible_job_ids_final)
+    status, output = send_prompt_to_llm(user_prompt, visible_job_ids)
     if not status:
         st.warning(output)
         return
 
     st.session_state["llm_response"] = output
+
+
+def get_visible_jobs():
+
+    visible_job_ids_fav = st.session_state.get("visible_job_ids_fav")
+    visible_job_ids = st.session_state.get("visible_job_ids")
+
+    return visible_job_ids_fav or visible_job_ids
