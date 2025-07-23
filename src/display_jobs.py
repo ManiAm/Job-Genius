@@ -400,7 +400,7 @@ def show_jobs(job_list, key_prefix="main"):
 
         with cols[2]:
 
-            if st.button("✏️", key=f"use_job_{job.id}", help="Generate resume"):
+            if st.button("✏️", key=f"{key_prefix}_use_job_{job.id}", help="Generate resume"):
                 st.session_state["generate_resume"] = job
                 st.rerun()
 
