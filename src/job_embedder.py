@@ -32,7 +32,7 @@ Here is the job text:
 def summarize_and_embed(job_ids_to_process):
 
     if not rag_search_remote.is_healthy():
-        return False, "RAG-Talk is not reachable"
+        return False, "RAG-Search is not reachable"
 
     batch_id = compute_batch_id(job_ids_to_process)
 

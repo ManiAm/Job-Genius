@@ -14,7 +14,10 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     libmagic1 \
     libglib2.0-0 \
-    libsm6 libxext6 libxrender-dev
+    libsm6 libxext6 libxrender-dev \
+    net-tools \
+    iputils-ping \
+    dnsutils
 
 RUN python3 -m venv /opt/venv
 

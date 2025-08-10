@@ -24,7 +24,7 @@ class RAG_SEARCH_REST_API_Client(REST_API_Client):
             response = requests.get(url, timeout=5)
             return response.status_code == 200
         except Exception as e:
-            print(f"RAG-Talk health check failed: {e}")
+            print(f"RAG-Search health check failed: {e}")
             return False
 
     #######################################

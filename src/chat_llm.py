@@ -34,7 +34,7 @@ Consider resume-job alignment when scoring or recommending jobs.
 def send_prompt_to_llm(user_prompt, job_ids_to_process):
 
     if not rag_search_remote.is_healthy():
-        return False, "RAG-Talk is not reachable"
+        return False, "RAG-Search is not reachable"
 
     ###########
 
